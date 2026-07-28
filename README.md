@@ -80,10 +80,10 @@ On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`. The app opens
 
 Try:
 
-- `How many tracks are in the store?`
-- `Which five artists have the most albums?`
-- `Show total sales by country.`
-- `What are the longest tracks?`
+- `How many customers are in the USA?`
+- `Find the top 5 customers by total spending`
+- `Which country generated the highest revenue?`
+- `Count how many tracks exist in each genre`
 
 ## Gemini setup
 

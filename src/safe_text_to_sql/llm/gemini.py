@@ -194,8 +194,19 @@ class GeminiLLMProvider:
                 ProviderErrorCode.UNAVAILABLE,
                 "Gemini is temporarily unavailable.",
             ) from exc
+        except Exception as exc:
+            raise ProviderError(
+                ProviderErrorCode.UNKNOWN,
+                "Gemini request failed safely.",
+            ) from exc
 
-        raw_text = response.text
+        try:
+            raw_text = response.text
+        except Exception as exc:
+            raise ProviderError(
+                ProviderErrorCode.INVALID_RESPONSE,
+                "Gemini returned an invalid structured response.",
+            ) from exc
         if not isinstance(raw_text, str) or not raw_text.strip():
             raise ProviderError(
                 ProviderErrorCode.INVALID_RESPONSE,

@@ -108,6 +108,8 @@ def build_components(settings: Settings, *, project_root: Path) -> AppComponents
         max_repair_attempts=settings.max_repair_attempts,
         example_top_k=settings.example_top_k,
         max_question_chars=settings.max_question_chars,
+        allowed_schemas=settings.allowed_schemas,
+        allowed_tables=settings.allowed_tables,
         logger=logger,
     )
     return AppComponents(

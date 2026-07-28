@@ -4,7 +4,7 @@ install:
 	python -m pip install -r requirements.lock
 
 init:
-	python scripts/initialize_demo_db.py
+	python scripts/initialize_demo_db.py --force
 
 run: init
 	streamlit run app.py

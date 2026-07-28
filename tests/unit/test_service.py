@@ -23,6 +23,7 @@ def _service(
     *,
     max_repair_attempts: int = 1,
     initialize: bool = True,
+    allowed_tables: frozenset[str] | None = None,
 ) -> TextToSQLService:
     path = tmp_path / "demo.sqlite"
     if initialize:
@@ -35,6 +36,7 @@ def _service(
         max_repair_attempts=max_repair_attempts,
         example_top_k=3,
         max_question_chars=500,
+        allowed_tables=allowed_tables,
         request_id_factory=lambda: "req-test",
     )
 
@@ -130,3 +132,23 @@ def test_question_length_is_enforced_before_provider_call(tmp_path: Path) -> Non
 
     assert exc_info.value.code is ServiceErrorCode.INVALID_QUESTION
     assert provider.calls == ()
+
+
+def test_configured_table_allowlist_narrows_introspected_schema(tmp_path: Path) -> None:
+    provider = FakeLLMProvider(
+        generated_sql='SELECT COUNT(*) FROM "Invoice"',
+    )
+    service = _service(
+        tmp_path,
+        provider,
+        max_repair_attempts=0,
+        allowed_tables=frozenset({"customer"}),
+    )
+
+    with pytest.raises(ServiceError) as exc_info:
+        asyncio.run(service.ask("Count invoices"))
+
+    assert exc_info.value.code is ServiceErrorCode.SQL_VALIDATION
+    assert provider.calls[0].schema_context is not None
+    assert '"Customer"' in provider.calls[0].schema_context
+    assert '"Invoice"' not in provider.calls[0].schema_context

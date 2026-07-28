@@ -8,7 +8,11 @@ import json
 from pathlib import Path
 
 from safe_text_to_sql.database.sqlite import SQLiteRepository
-from safe_text_to_sql.evaluation import load_evaluation_cases, run_evaluation
+from safe_text_to_sql.evaluation import (
+    evaluation_exit_code,
+    load_evaluation_cases,
+    run_evaluation,
+)
 from safe_text_to_sql.examples.loader import load_examples
 from safe_text_to_sql.examples.selector import ExampleSelector
 from safe_text_to_sql.llm.fake import FakeLLMProvider
@@ -25,8 +29,8 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=None,
-        help="Optional ignored JSON result path.",
+        default=Path("evaluation/results/fake-evaluation.json"),
+        help="Ignored JSON result path.",
     )
     arguments = parser.parse_args()
 
@@ -47,16 +51,17 @@ def main() -> None:
             provider_mode="fake",
         )
     )
-    if arguments.output is not None:
-        arguments.output.parent.mkdir(parents=True, exist_ok=True)
-        arguments.output.write_text(
-            json.dumps(report.to_dict(), indent=2),
-            encoding="utf-8",
-        )
+    arguments.output.parent.mkdir(parents=True, exist_ok=True)
+    arguments.output.write_text(
+        json.dumps(report.to_dict(), indent=2),
+        encoding="utf-8",
+    )
     print(
         "Deterministic functional verification: "
         f"{report.matched_cases}/{report.total_cases} expected results matched."
     )
+    if exit_code := evaluation_exit_code(report):
+        raise SystemExit(exit_code)
 
 
 if __name__ == "__main__":

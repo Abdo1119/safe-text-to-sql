@@ -58,6 +58,12 @@ class ExampleSelector:
         self._examples = examples
         self._tokens = tuple(_tokenize(example.question) for example in examples)
 
+    @property
+    def example_count(self) -> int:
+        """Return the number of reviewed examples available for ranking."""
+
+        return len(self._examples)
+
     def select(self, question: str, *, top_k: int) -> tuple[SelectedExample, ...]:
         """Return stable top-k selections and lexical match metadata."""
 

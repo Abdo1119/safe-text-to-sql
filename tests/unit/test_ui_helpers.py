@@ -6,6 +6,7 @@ from safe_text_to_sql.service import ServiceError, ServiceErrorCode
 from safe_text_to_sql.ui import (
     safe_configuration_summary,
     safe_error_message,
+    safe_unexpected_error_message,
     validation_summary,
 )
 
@@ -60,3 +61,12 @@ def test_safe_error_message_contains_category_and_request_id_only() -> None:
     message = safe_error_message(error)
 
     assert message == ("The demo database is unavailable. Reference: req-safe (database).")
+
+
+def test_unexpected_error_message_never_contains_exception_details() -> None:
+    private_detail = "private-unexpected-runtime-detail"
+
+    message = safe_unexpected_error_message(RuntimeError(private_detail))
+
+    assert private_detail not in message
+    assert message == "The request could not be completed safely. Try again."

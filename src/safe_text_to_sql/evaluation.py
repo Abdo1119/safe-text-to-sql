@@ -51,6 +51,17 @@ class EvaluationReport:
     matched_cases: int
     records: tuple[EvaluationRecord, ...]
 
+    @property
+    def succeeded(self) -> bool:
+        """Whether every case passed validation, execution, and expectation checks."""
+
+        return bool(self.records) and all(
+            record.validation_status == "passed"
+            and record.execution_status == "passed"
+            and record.expected_result_match
+            for record in self.records
+        )
+
     def to_dict(self) -> dict[str, object]:
         return {
             "label": self.label,
@@ -63,6 +74,12 @@ class EvaluationReport:
 
 class EvaluationCaseError(ValueError):
     """Raised when the checked-in evaluation set is invalid."""
+
+
+def evaluation_exit_code(report: EvaluationReport) -> int:
+    """Return a process exit code suitable for CI evaluation gates."""
+
+    return 0 if report.succeeded else 1
 
 
 def load_evaluation_cases(path: Path) -> tuple[EvaluationCase, ...]:

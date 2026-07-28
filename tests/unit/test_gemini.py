@@ -157,3 +157,14 @@ def test_api_error_is_mapped_to_safe_category() -> None:
 
     assert exc_info.value.code is ProviderErrorCode.RATE_LIMIT
     assert "abc-123" not in str(exc_info.value)
+
+
+def test_unexpected_sdk_error_is_mapped_without_exposing_details() -> None:
+    private_detail = "private-sdk-runtime-detail"
+    provider, _ = _provider([RuntimeError(private_detail)])
+
+    with pytest.raises(ProviderError) as exc_info:
+        asyncio.run(provider.generate_sql(UserQuestion("Return one"), "schema"))
+
+    assert exc_info.value.code is ProviderErrorCode.UNKNOWN
+    assert private_detail not in str(exc_info.value)

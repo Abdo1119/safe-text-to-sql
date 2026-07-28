@@ -8,6 +8,7 @@ from collections.abc import Callable
 from enum import StrEnum
 
 from safe_text_to_sql.database.protocol import DatabaseRepository
+from safe_text_to_sql.database.schema import DatabaseSchema
 from safe_text_to_sql.database.sqlite import DatabaseError, DatabaseErrorCode
 from safe_text_to_sql.examples.selector import ExampleSelector
 from safe_text_to_sql.llm.protocol import LLMProvider, LLMProviderError
@@ -61,6 +62,8 @@ class TextToSQLService:
         max_repair_attempts: int,
         example_top_k: int,
         max_question_chars: int,
+        allowed_schemas: frozenset[str] = frozenset(),
+        allowed_tables: frozenset[str] | None = None,
         request_id_factory: Callable[[], str] | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
@@ -75,6 +78,8 @@ class TextToSQLService:
         self._max_repair_attempts = max_repair_attempts
         self._example_top_k = example_top_k
         self._max_question_chars = max_question_chars
+        self._allowed_schemas = allowed_schemas
+        self._allowed_tables = allowed_tables
         self._request_id_factory = request_id_factory or (lambda: uuid.uuid4().hex[:12])
         self._logger = logger or logging.getLogger("safe_text_to_sql.service")
 
@@ -105,17 +110,33 @@ class TextToSQLService:
                 str(exc),
                 request_id=request_id,
             ) from exc
-        selections = self._selector.select(question.text, top_k=self._example_top_k)
-        generation_context = build_generation_context(
-            schema.render_for_prompt(),
-            selections,
+        effective_tables = schema.allowed_tables
+        if self._allowed_tables is not None:
+            effective_tables &= self._allowed_tables
+        schema = DatabaseSchema(
+            tables=tuple(
+                table for table in schema.tables if table.name.casefold() in effective_tables
+            )
         )
         guard = SQLGuard(
             SQLPolicy(
-                allowed_schemas=frozenset(),
-                allowed_tables=schema.allowed_tables,
+                allowed_schemas=self._allowed_schemas,
+                allowed_tables=effective_tables,
                 max_rows=self._max_rows,
             )
+        )
+        ranked_examples = self._selector.select(
+            question.text,
+            top_k=self._selector.example_count,
+        )
+        selections = tuple(
+            selection
+            for selection in ranked_examples
+            if guard.validate(selection.example.sql).is_valid
+        )[: self._example_top_k]
+        generation_context = build_generation_context(
+            schema.render_for_prompt(),
+            selections,
         )
 
         try:

@@ -157,6 +157,12 @@ def safe_error_message(error: ServiceError) -> str:
     return f"{error} Reference: {error.request_id} ({error.code.value})."
 
 
+def safe_unexpected_error_message(_error: Exception) -> str:
+    """Return a constant boundary message without rendering exception details."""
+
+    return "The request could not be completed safely. Try again."
+
+
 def render_app(
     settings: Settings,
     components: AppComponents,
@@ -237,6 +243,9 @@ def render_app(
             except ServiceError as exc:
                 status.update(label="Request stopped safely", state="error")
                 st.error(safe_error_message(exc))
+            except Exception as exc:
+                status.update(label="Request stopped safely", state="error")
+                st.error(safe_unexpected_error_message(exc))
             else:
                 status.update(label="Validated query completed", state="complete")
                 st.session_state["workflow_result"] = result
