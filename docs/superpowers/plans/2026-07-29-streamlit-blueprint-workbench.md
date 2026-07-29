@@ -70,8 +70,7 @@ Update `test_streamlit_app_renders_safe_offline_workbench` to assert:
 ```python
 assert app.title[0].value == "Safe Text-to-SQL"
 assert any(
-    "Ask questions. Inspect the query. Trust the boundary." in item.value
-    for item in app.markdown
+    "Ask questions. Inspect the query. Trust the boundary." in item.value for item in app.markdown
 )
 assert any(button.label == "Generate guarded answer" for button in app.button)
 for phase in ("Generate", "Guard", "Execute", "Answer"):

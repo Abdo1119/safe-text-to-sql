@@ -9,6 +9,9 @@ Google Gemini for real language-model generation. No Azure service is required.
 
 ![Safe Text-to-SQL workbench](assets/screenshots/workbench.png)
 
+The screenshot shows the deterministic offline workflow with a reviewed question,
+AST validation, read-only execution, and a grounded answer.
+
 ## Why this project exists
 
 Text-to-SQL can make analytics accessible to non-SQL users, but executing
