@@ -5,7 +5,7 @@ services:
     environment:
       PORT: ${PORT:-8501}
       LLM_PROVIDER: ${LLM_PROVIDER:-fake}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
       MAX_RETURNED_ROWS: ${MAX_RETURNED_ROWS:-200}
       MAX_REPAIR_ATTEMPTS: ${MAX_REPAIR_ATTEMPTS:-1}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}

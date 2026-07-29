@@ -247,7 +247,9 @@ def _map_api_error(error: errors.APIError) -> ProviderError:
     if code == 404:
         return ProviderError(
             ProviderErrorCode.CONFIGURATION,
-            "The configured Gemini model is unavailable.",
+            "The configured Gemini model is unavailable to this API key. Google retires "
+            "model identifiers for new projects; set GEMINI_MODEL to a model the key "
+            "can call.",
         )
     if code == 429:
         return ProviderError(

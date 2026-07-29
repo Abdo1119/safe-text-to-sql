@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from safe_text_to_sql.config import Settings
+from safe_text_to_sql.config import DEFAULT_GEMINI_MODEL, Settings
 from safe_text_to_sql.models import ValidatedSQLQuery
 from safe_text_to_sql.service import ServiceError, ServiceErrorCode
 from safe_text_to_sql.ui import (
@@ -26,7 +26,7 @@ def test_configuration_summary_excludes_secrets_and_local_paths() -> None:
     rendered = repr(summary)
 
     assert summary["Provider"] == "Gemini"
-    assert summary["Model"] == "gemini-2.5-flash"
+    assert summary["Model"] == DEFAULT_GEMINI_MODEL
     assert summary["Examples"] == "25 reviewed / top 3"
     assert private_path not in rendered
     assert private_key not in rendered

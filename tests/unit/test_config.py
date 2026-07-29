@@ -26,7 +26,7 @@ def test_fake_mode_uses_safe_offline_defaults() -> None:
     assert settings.max_returned_rows == 200
     assert settings.max_repair_attempts == 1
     assert settings.example_top_k == 3
-    assert settings.gemini_model == "gemini-2.5-flash"
+    assert settings.gemini_model == "gemini-3.6-flash"
     assert settings.gemini_request_timeout_seconds == 30.0
     assert settings.gemini_max_retries == 2
     assert settings.allowed_schemas == frozenset()

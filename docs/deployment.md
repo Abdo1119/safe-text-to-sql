@@ -11,7 +11,7 @@
    ```toml
    LLM_PROVIDER = "gemini"
    GEMINI_API_KEY = "configured_in_streamlit_cloud"
-   GEMINI_MODEL = "gemini-2.5-flash"
+   GEMINI_MODEL = "gemini-3.6-flash"
    ```
 
 Do not create or commit `.streamlit/secrets.toml`. The bootstrap layer accepts only

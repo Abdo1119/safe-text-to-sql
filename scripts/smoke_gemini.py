@@ -21,10 +21,12 @@ def main() -> None:
         "success": False,
         "selected_model": None,
         "sanitized_error_category": None,
+        "sanitized_error_message": None,
         "elapsed_seconds": None,
         "valid_sql_produced": False,
         "validation_passed": False,
         "execution_succeeded": False,
+        "answer_generated": False,
     }
 
     try:
@@ -41,17 +43,27 @@ def main() -> None:
                 {
                     "success": True,
                     "valid_sql_produced": bool(result.candidate.sql),
-                    "validation_passed": True,
+                    "validation_passed": bool(result.validated_query.sql),
                     "execution_succeeded": True,
+                    "answer_generated": bool(result.answer.answer.strip()),
+                    "returned_rows": len(result.query_result.rows),
+                    "repair_attempts": result.repair_attempts,
                 }
             )
-    except ConfigError:
+    except ConfigError as exc:
         status["sanitized_error_category"] = "configuration"
+        status["sanitized_error_message"] = str(exc)
     except ServiceError as exc:
         cause = exc.__cause__
-        status["sanitized_error_category"] = (
-            cause.code.value if isinstance(cause, ProviderError) else exc.code.value
-        )
+        # ProviderError messages are fixed, author-written strings that exclude prompts,
+        # credentials, rows, and raw provider responses. Surfacing the message is what
+        # makes an ambiguous category such as "configuration" actionable.
+        if isinstance(cause, ProviderError):
+            status["sanitized_error_category"] = cause.code.value
+            status["sanitized_error_message"] = str(cause)
+        else:
+            status["sanitized_error_category"] = exc.code.value
+            status["sanitized_error_message"] = str(exc)
     except Exception:
         status["sanitized_error_category"] = "internal"
     finally:

@@ -11,6 +11,11 @@ from typing import TypeVar
 
 EnumType = TypeVar("EnumType", bound=StrEnum)
 
+DEFAULT_GEMINI_MODEL = "gemini-3.6-flash"
+"""Pinned Gemini model. Google retires older identifiers for new API projects, so a
+retired default fails with a 404 rather than degrading. Verify a replacement against
+`models.list()` and a real request before changing this value."""
+
 
 class ConfigError(ValueError):
     """Raised when configuration is missing or invalid."""
@@ -122,7 +127,7 @@ class Settings:
         if log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
             raise ConfigError("LOG_LEVEL must be a supported logging level.")
 
-        gemini_model = values.get("GEMINI_MODEL", "gemini-2.5-flash").strip()
+        gemini_model = values.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL).strip()
         if not gemini_model:
             raise ConfigError("GEMINI_MODEL must not be empty.")
         request_timeout = _parse_positive_float(

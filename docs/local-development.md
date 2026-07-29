@@ -32,7 +32,7 @@ runtime; imports do not load `.env`.
 | --- | --- | --- |
 | `LLM_PROVIDER` | `fake` or `gemini` | `fake` |
 | `GEMINI_API_KEY` | Gemini credential | none |
-| `GEMINI_MODEL` | Gemini model identifier | `gemini-2.5-flash` |
+| `GEMINI_MODEL` | Gemini model identifier | `gemini-3.6-flash` |
 | `DATABASE_PATH` | Fixed application database | `data/demo/chinook_demo.sqlite` |
 | `MAX_RETURNED_ROWS` | Execution row cap | `200` |
 | `MAX_REPAIR_ATTEMPTS` | Bounded repair count | `1` |

@@ -92,7 +92,15 @@ Copy `.env.example` to `.env`, then set:
 ```env
 LLM_PROVIDER=gemini
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.6-flash
+```
+
+Google retires model identifiers for new API projects, and a retired model returns a
+`404` rather than degrading gracefully. If Gemini mode reports that the model is
+unavailable, list the models your key can call and set `GEMINI_MODEL` to a current one:
+
+```bash
+python scripts/list_gemini_models.py
 ```
 
 Never commit `.env`. If Gemini mode is selected without a key, the UI returns a safe

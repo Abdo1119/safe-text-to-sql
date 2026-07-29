@@ -159,6 +159,32 @@ def test_api_error_is_mapped_to_safe_category() -> None:
     assert "abc-123" not in str(exc_info.value)
 
 
+def test_retired_model_404_is_configuration_and_names_the_setting_to_change() -> None:
+    """A retired model identifier must be diagnosable from the sanitized message.
+
+    Google returns 404 for identifiers it still lists but no longer serves to new
+    projects, so the category alone did not tell an operator which value was wrong.
+    """
+
+    api_error = errors.APIError(
+        404,
+        {
+            "error": {
+                "message": (
+                    "This model models/gemini-2.5-flash is no longer available to new users."
+                )
+            }
+        },
+    )
+    provider, _ = _provider([api_error])
+
+    with pytest.raises(ProviderError) as exc_info:
+        asyncio.run(provider.generate_sql(UserQuestion("Return one"), "schema"))
+
+    assert exc_info.value.code is ProviderErrorCode.CONFIGURATION
+    assert "GEMINI_MODEL" in str(exc_info.value)
+
+
 def test_unexpected_sdk_error_is_mapped_without_exposing_details() -> None:
     private_detail = "private-sdk-runtime-detail"
     provider, _ = _provider([RuntimeError(private_detail)])
