@@ -11,6 +11,7 @@ from google import genai
 from google.genai import errors, types
 
 from safe_text_to_sql.config import SecretValue
+from safe_text_to_sql.llm.json_recovery import extract_single_json_object
 from safe_text_to_sql.llm.protocol import LLMProviderError
 from safe_text_to_sql.models import (
     AnswerResponse,
@@ -214,11 +215,18 @@ class GeminiLLMProvider:
             )
         try:
             payload = json.loads(raw_text)
-        except json.JSONDecodeError as exc:
-            raise ProviderError(
-                ProviderErrorCode.INVALID_RESPONSE,
-                "Gemini returned an invalid structured response.",
-            ) from exc
+        except json.JSONDecodeError:
+            # Structured output stays the contract; this only unwraps a conversational
+            # prefix or Markdown fence around one otherwise complete object. Anything
+            # ambiguous is rejected, and the recovered object faces the same field
+            # checks as a directly parsed one.
+            recovered = extract_single_json_object(raw_text)
+            if recovered is None:
+                raise ProviderError(
+                    ProviderErrorCode.INVALID_RESPONSE,
+                    "Gemini returned an invalid structured response.",
+                ) from None
+            return recovered
         if not isinstance(payload, dict):
             raise ProviderError(
                 ProviderErrorCode.INVALID_RESPONSE,

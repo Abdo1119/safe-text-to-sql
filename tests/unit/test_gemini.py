@@ -134,6 +134,71 @@ def test_repair_and_answer_parse_their_expected_json_fields() -> None:
     assert answer.answer == "The result is two."
 
 
+def test_prose_wrapped_object_is_recovered_and_still_schema_checked() -> None:
+    """Observed live behaviour: a conversational prefix around a valid object."""
+
+    provider, _ = _provider([_Response('Here is the JSON requested:\n{"sql":"SELECT 1"}')])
+
+    candidate = asyncio.run(provider.generate_sql(UserQuestion("Return one"), "schema"))
+
+    assert candidate.sql == "SELECT 1"
+    assert candidate.provider == "gemini"
+
+
+def test_fenced_answer_response_is_recovered() -> None:
+    provider, _ = _provider([_Response('```json\n{"answer":"The result is two."}\n```')])
+
+    answer = asyncio.run(
+        provider.generate_answer(
+            UserQuestion("Return two"),
+            _query(),
+            QueryResult(columns=("value",), rows=((2,),)),
+        )
+    )
+
+    assert answer.answer == "The result is two."
+
+
+@pytest.mark.parametrize(
+    ("label", "raw"),
+    [
+        ("two objects", 'Options: {"sql":"SELECT 1"} or {"sql":"SELECT 2"}'),
+        ("truncated", 'Here you go: {"sql":"SELECT 1"'),
+        ("array payload", 'Here you go: [{"sql":"SELECT 1"}]'),
+        ("prose only", "I cannot answer that question."),
+    ],
+)
+def test_unrecoverable_responses_keep_the_sanitized_invalid_response_error(
+    label: str,
+    raw: str,
+) -> None:
+    provider, _ = _provider([_Response(raw)])
+
+    with pytest.raises(ProviderError) as exc_info:
+        asyncio.run(provider.generate_sql(UserQuestion("Return one"), "schema"))
+
+    assert exc_info.value.code is ProviderErrorCode.INVALID_RESPONSE, label
+    assert raw not in str(exc_info.value)
+
+
+def test_recovered_object_with_a_wrong_field_type_is_not_coerced() -> None:
+    provider, _ = _provider([_Response('Here you go: {"sql": 42}')])
+
+    with pytest.raises(ProviderError) as exc_info:
+        asyncio.run(provider.generate_sql(UserQuestion("Return one"), "schema"))
+
+    assert exc_info.value.code is ProviderErrorCode.INVALID_RESPONSE
+
+
+def test_recovered_object_missing_the_required_field_is_rejected() -> None:
+    provider, _ = _provider([_Response('Here you go: {"query": "SELECT 1"}')])
+
+    with pytest.raises(ProviderError) as exc_info:
+        asyncio.run(provider.generate_sql(UserQuestion("Return one"), "schema"))
+
+    assert exc_info.value.code is ProviderErrorCode.INVALID_RESPONSE
+
+
 def test_invalid_response_is_mapped_without_exposing_response_content() -> None:
     private_response = "private-provider-response-content"
     provider, _ = _provider([_Response(private_response)])
