@@ -7,10 +7,13 @@ it through a read-only SQLite connection, and produces a grounded answer.
 The application runs entirely offline with a deterministic fake provider, or uses
 Google Gemini for real language-model generation. No Azure service is required.
 
+**[Live demo](https://safe-text-to-sql-jopyjpvxd2y2cgvhv63zrn.streamlit.app/)**
+
 ![Safe Text-to-SQL workbench](assets/screenshots/workbench.png)
 
-The screenshot shows the deterministic offline workflow with a reviewed question,
-AST validation, read-only execution, and a grounded answer.
+The screenshot is the deployed application answering a live Gemini question: generated
+SQL, AST validation, read-only execution, and a grounded answer taken from the returned
+rows.
 
 ## Why this project exists
 
@@ -155,9 +158,11 @@ runtime; the image never contains `.env`. See [docs/docker.md](docs/docker.md).
 
 ## Deployment
 
-The repository is prepared for Streamlit Community Cloud and any container platform
-that supports a configurable `PORT`. Cloud deployment is not claimed by this
-repository. See [docs/deployment.md](docs/deployment.md).
+The application is deployed on Streamlit Community Cloud at the
+[live demo](https://safe-text-to-sql-jopyjpvxd2y2cgvhv63zrn.streamlit.app/) and runs on
+any container platform that supports a configurable `PORT`. The demo database is
+generated at startup, and Gemini credentials are supplied through Streamlit Secrets. See
+[docs/deployment.md](docs/deployment.md).
 
 ## Data provenance
 
