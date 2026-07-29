@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from safe_text_to_sql import ui
 from safe_text_to_sql.config import Settings
 from safe_text_to_sql.models import ValidatedSQLQuery
 from safe_text_to_sql.service import ServiceError, ServiceErrorCode
@@ -9,6 +10,36 @@ from safe_text_to_sql.ui import (
     safe_unexpected_error_message,
     validation_summary,
 )
+
+
+def test_runtime_badges_are_safe_and_reviewer_friendly() -> None:
+    private_path = "private/local/demo.sqlite"
+    private_key = "dummy-private-key"
+    settings = Settings.from_env(
+        {
+            "LLM_PROVIDER": "gemini",
+            "GEMINI_API_KEY": private_key,
+            "DATABASE_PATH": private_path,
+        }
+    )
+    badge_builder = getattr(ui, "safe_runtime_badges", None)
+
+    assert badge_builder is not None
+
+    badges = badge_builder(
+        settings,
+        example_count=25,
+        database_ready=True,
+    )
+
+    assert badges == (
+        "Gemini · gemini-2.5-flash",
+        "SQLite · read-only",
+        "25 reviewed examples",
+        "Database ready",
+    )
+    assert private_path not in repr(badges)
+    assert private_key not in repr(badges)
 
 
 def test_configuration_summary_excludes_secrets_and_local_paths() -> None:
