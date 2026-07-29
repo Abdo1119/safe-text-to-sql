@@ -299,6 +299,11 @@ textarea:focus-visible,
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
+[data-testid="stMetricValue"] {
+  font-size: clamp(1.05rem, 1.8vw, 1.45rem);
+  line-height: 1.2;
+  white-space: normal;
+}
 [data-testid="stDataFrame"] {
   border: 1px solid var(--rule-gray);
   border-radius: 0.75rem;
