@@ -14,6 +14,7 @@ _EXCLUDED_DIRECTORIES = frozenset(
         ".pytest_cache",
         ".ruff_cache",
         ".venv",
+        ".worktrees",
         "__pycache__",
         "evaluation/results",
         "legacy_reference",
@@ -94,6 +95,9 @@ def _is_forbidden_release_path(relative: str) -> bool:
     if parts[0] in {
         ".migration",
         ".venv",
+        # A git worktree tracked from the parent repository is committed as a gitlink,
+        # which publishes a reference to a local development checkout.
+        ".worktrees",
         "legacy_reference",
         "logs",
         "venv",

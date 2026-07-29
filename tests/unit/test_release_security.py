@@ -58,3 +58,9 @@ def test_forbidden_tracked_paths_are_reported() -> None:
         "data/demo/demo.sqlite",
         "legacy_reference/app.py",
     )
+
+
+def test_local_git_worktree_is_a_forbidden_tracked_path() -> None:
+    """A worktree staged from the parent repository becomes a published gitlink."""
+
+    assert find_forbidden_paths([".worktrees/feature-branch"]) == (".worktrees/feature-branch",)
