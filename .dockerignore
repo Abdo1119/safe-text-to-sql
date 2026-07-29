@@ -21,6 +21,7 @@ logs
 evaluation/results
 data/demo/*.sqlite
 data/demo/*.sqlite-*
+data/demo/*.sqlite.provisioning
 data/demo/*.db
 tests
 assets

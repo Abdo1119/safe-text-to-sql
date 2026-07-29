@@ -2,8 +2,25 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
+from contextlib import closing
+from enum import StrEnum
 from pathlib import Path
+from urllib.parse import quote
+
+EXPECTED_TABLES = frozenset(
+    {
+        "Album",
+        "Artist",
+        "Customer",
+        "Employee",
+        "Genre",
+        "Invoice",
+        "InvoiceLine",
+        "Track",
+    }
+)
 
 _SCHEMA_SQL = """
 PRAGMA foreign_keys = ON;
@@ -179,6 +196,70 @@ class DatabaseInitializationError(RuntimeError):
     """Raised when the deterministic database cannot be initialized."""
 
 
+class DatabaseProvisionState(StrEnum):
+    """Outcome of an idempotent provisioning attempt."""
+
+    CREATED = "created"
+    ALREADY_PRESENT = "already_present"
+
+
+def verify_database_schema(path: Path) -> None:
+    """Confirm a database file exposes every expected demo table.
+
+    Raises DatabaseInitializationError without the path or driver text, so callers can
+    surface the failure in a public interface.
+    """
+
+    try:
+        uri_path = quote(path.resolve().as_posix(), safe="/:")
+        # closing() matters here: sqlite3's own context manager commits but never
+        # closes, and an open handle blocks the replace step on Windows.
+        with closing(
+            sqlite3.connect(f"file:{uri_path}?mode=ro", uri=True, timeout=5)
+        ) as connection:
+            rows = connection.execute(
+                "SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+            ).fetchall()
+    except (OSError, sqlite3.DatabaseError) as exc:
+        raise DatabaseInitializationError("The demo database could not be verified.") from exc
+    if EXPECTED_TABLES - {str(row[0]) for row in rows}:
+        raise DatabaseInitializationError("The demo database is missing required tables.")
+
+
+def ensure_database(path: Path) -> DatabaseProvisionState:
+    """Provision the demo database once, without overwriting an existing valid one.
+
+    Safe to call on every application start. A new database is built in a temporary
+    file and moved into place, so an interrupted run never leaves a half-written
+    database that later starts would treat as real.
+    """
+
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise DatabaseInitializationError(
+            "The demo database location could not be created."
+        ) from exc
+
+    if path.is_file() and path.stat().st_size > 0:
+        verify_database_schema(path)
+        return DatabaseProvisionState.ALREADY_PRESENT
+
+    # A zero-length file is not a database, so replacing it destroys nothing.
+    temporary = path.with_name(f"{path.name}.provisioning")
+    try:
+        temporary.unlink(missing_ok=True)
+    except OSError as exc:
+        raise DatabaseInitializationError("The demo database could not be prepared.") from exc
+    initialize_database(temporary, overwrite=True)
+    verify_database_schema(temporary)
+    try:
+        os.replace(temporary, path)
+    except OSError as exc:
+        raise DatabaseInitializationError("The demo database could not be published.") from exc
+    return DatabaseProvisionState.CREATED
+
+
 def initialize_database(path: Path, *, overwrite: bool = False) -> None:
     """Create a deterministic database without reading legacy datasets."""
 
@@ -188,7 +269,7 @@ def initialize_database(path: Path, *, overwrite: bool = False) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         if path.exists():
             path.unlink()
-        with sqlite3.connect(path) as connection:
+        with closing(sqlite3.connect(path)) as connection, connection:
             connection.executescript(_SCHEMA_SQL)
             connection.executemany('INSERT INTO "Artist" VALUES (?, ?)', _ARTISTS)
             connection.executemany('INSERT INTO "Album" VALUES (?, ?, ?)', _ALBUMS)

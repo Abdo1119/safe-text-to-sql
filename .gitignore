@@ -24,6 +24,7 @@ logs/
 # Reproducible runtime artifacts
 data/demo/*.sqlite
 data/demo/*.sqlite-*
+data/demo/*.sqlite.provisioning
 data/demo/*.db
 evaluation/results/
 

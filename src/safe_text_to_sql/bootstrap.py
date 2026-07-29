@@ -11,6 +11,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 from safe_text_to_sql.config import LLMProviderMode, Settings
+from safe_text_to_sql.database.initializer import DatabaseProvisionState, ensure_database
 from safe_text_to_sql.database.sqlite import SQLiteRepository
 from safe_text_to_sql.examples.loader import load_examples
 from safe_text_to_sql.examples.selector import ExampleSelector
@@ -74,6 +75,18 @@ def load_runtime_settings(
 
     load_dotenv(project_root / ".env", override=False)
     return Settings.from_env(merge_runtime_environment(os.environ, streamlit_secrets))
+
+
+def provision_database(settings: Settings, *, project_root: Path) -> DatabaseProvisionState:
+    """Make the demo database exist before any query path needs it.
+
+    Deployment targets such as Streamlit Community Cloud start from a fresh checkout
+    where the generated database is absent, and no operator can run a command there.
+    This needs no provider credentials, so it works identically in fake and Gemini
+    mode.
+    """
+
+    return ensure_database(_project_path(settings.database_path, project_root))
 
 
 def build_components(settings: Settings, *, project_root: Path) -> AppComponents:

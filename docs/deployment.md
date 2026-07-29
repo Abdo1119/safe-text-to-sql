@@ -17,6 +17,18 @@
 Do not create or commit `.streamlit/secrets.toml`. The bootstrap layer accepts only
 known configuration keys and environment variables take precedence.
 
+### Database provisioning
+
+The generated database is not committed, so a cloud checkout starts without one. The
+application provisions it during startup: it creates the parent directory, builds the
+synthetic database when missing, verifies the schema, and leaves an existing valid
+database untouched. Provisioning needs no provider credentials, so it behaves the same
+in fake and Gemini mode, and query execution still uses a separate read-only
+connection afterwards.
+
+Streamlit Community Cloud storage is ephemeral. A restarted container regenerates the
+same deterministic data, and no user state is expected to survive a restart.
+
 ## Container platforms
 
 Build the provided Dockerfile, publish the image to a trusted registry, and expose the

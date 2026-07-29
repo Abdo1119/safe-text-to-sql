@@ -7,8 +7,16 @@ from pathlib import Path
 import streamlit as st
 from streamlit.errors import StreamlitSecretNotFoundError
 
-from safe_text_to_sql.bootstrap import build_components, load_runtime_settings
+from safe_text_to_sql.bootstrap import (
+    build_components,
+    load_runtime_settings,
+    provision_database,
+)
 from safe_text_to_sql.config import ConfigError
+from safe_text_to_sql.database.initializer import (
+    DatabaseInitializationError,
+    DatabaseProvisionState,
+)
 from safe_text_to_sql.ui import render_app
 
 
@@ -30,7 +38,6 @@ def main() -> None:
             project_root=project_root,
             streamlit_secrets=secrets,
         )
-        components = build_components(settings, project_root=project_root)
     except ConfigError as exc:
         st.error(str(exc))
         st.info(
@@ -42,7 +49,30 @@ def main() -> None:
         st.error("The application could not start with the current local configuration.")
         st.stop()
 
-    render_app(settings, components)
+    try:
+        with st.spinner("Initializing the synthetic demo database…"):
+            provision_state = provision_database(settings, project_root=project_root)
+    except DatabaseInitializationError:
+        st.error(
+            "The synthetic demo database could not be prepared, so queries are "
+            "disabled. No data was modified."
+        )
+        st.stop()
+    except Exception:
+        st.error("The synthetic demo database could not be prepared.")
+        st.stop()
+
+    try:
+        components = build_components(settings, project_root=project_root)
+    except Exception:
+        st.error("The application could not start with the current configuration.")
+        st.stop()
+
+    render_app(
+        settings,
+        components,
+        database_created=provision_state is DatabaseProvisionState.CREATED,
+    )
 
 
 if __name__ == "__main__":

@@ -428,6 +428,8 @@ def safe_unexpected_error_message(_error: Exception) -> str:
 def render_app(
     settings: Settings,
     components: AppComponents,
+    *,
+    database_created: bool = False,
 ) -> None:
     """Render the complete interactive workbench."""
 
@@ -454,6 +456,80 @@ def render_app(
         f'<div class="status-rack">{rendered_badges}</div>',
         unsafe_allow_html=True,
     )
+    with st.sidebar:
+        st.markdown("### Safe Text-to-SQL")
+        st.caption("Runtime controls")
+        summary = safe_configuration_summary(
+            settings,
+            example_count=components.example_count,
+        )
+        for label, value in summary.items():
+            st.caption(label)
+            st.write(value)
+        st.divider()
+        if database_ready:
+            st.success("Database ready")
+            if database_created:
+                st.caption("Synthetic demo data was generated for this deployment.")
+        else:
+            st.warning(database_message)
+        if st.button("Reset session", width="stretch"):
+            st.session_state.clear()
+            st.rerun()
+
+    st.markdown(
+        """
+        <div class="query-intro">
+          <h2>Query the music store</h2>
+          <span>Natural language → guarded SQL</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    with st.form("analytics_question"):
+        sample = st.selectbox(
+            "Start with a reviewed question",
+            ("Write my own question", *_SAMPLE_QUESTIONS),
+        )
+        question = st.text_area(
+            "Or ask your own analytics question",
+            placeholder="For example: Which country generated the highest revenue?",
+            max_chars=settings.max_question_chars,
+            height=110,
+            help="Enter adds a new line. Use the button below, or Ctrl+Enter, to submit.",
+        )
+        submitted = st.form_submit_button(
+            "Run guarded query",
+            type="primary",
+            disabled=not database_ready,
+            width="stretch",
+        )
+        if not database_ready:
+            st.caption(database_message)
+
+    if submitted:
+        selected_question = question.strip() or (
+            sample if sample != "Write my own question" else ""
+        )
+        with st.status("Running the guarded workflow…", expanded=True) as status:
+            st.write("Selecting reviewed examples and generating SQL")
+            try:
+                result = asyncio.run(components.service.ask(selected_question))
+            except ServiceError as exc:
+                status.update(label="Request stopped safely", state="error")
+                st.error(safe_error_message(exc))
+            except Exception as exc:
+                status.update(label="Request stopped safely", state="error")
+                st.error(safe_unexpected_error_message(exc))
+            else:
+                status.update(label="Validated query completed", state="complete")
+                st.session_state["workflow_result"] = result
+
+    stored_result = st.session_state.get("workflow_result")
+    if isinstance(stored_result, WorkflowResult):
+        _render_result(stored_result)
+
+    # Rendered after the form so the submit control stays above the fold.
     st.markdown(
         """
         <div class="trust-shell">
@@ -480,80 +556,12 @@ def render_app(
         unsafe_allow_html=True,
     )
 
-    with st.sidebar:
-        st.markdown("### Safe Text-to-SQL")
-        st.caption("Runtime controls")
-        summary = safe_configuration_summary(
-            settings,
-            example_count=components.example_count,
-        )
-        for label, value in summary.items():
-            st.caption(label)
-            st.write(value)
-        st.divider()
-        if database_ready:
-            st.success("Database ready")
-        else:
-            st.warning(database_message)
-        if st.button("Reset session", width="stretch"):
-            st.session_state.clear()
-            st.rerun()
-
-    st.markdown(
-        """
-        <div class="query-intro">
-          <h2>Query the music store</h2>
-          <span>Natural language → guarded SQL</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    with st.form("analytics_question"):
-        sample = st.selectbox(
-            "Start with a reviewed question",
-            ("Write my own question", *_SAMPLE_QUESTIONS),
-        )
-        question = st.text_area(
-            "Or ask your own analytics question",
-            placeholder="For example: Which country generated the highest revenue?",
-            max_chars=settings.max_question_chars,
-            height=110,
-        )
-        submitted = st.form_submit_button(
-            "Generate guarded answer",
-            type="primary",
-            disabled=not database_ready,
-            width="stretch",
-        )
-
-    if submitted:
-        selected_question = question.strip() or (
-            sample if sample != "Write my own question" else ""
-        )
-        with st.status("Running the guarded workflow…", expanded=True) as status:
-            st.write("Selecting reviewed examples and generating SQL")
-            try:
-                result = asyncio.run(components.service.ask(selected_question))
-            except ServiceError as exc:
-                status.update(label="Request stopped safely", state="error")
-                st.error(safe_error_message(exc))
-            except Exception as exc:
-                status.update(label="Request stopped safely", state="error")
-                st.error(safe_unexpected_error_message(exc))
-            else:
-                status.update(label="Validated query completed", state="complete")
-                st.session_state["workflow_result"] = result
-
-    stored_result = st.session_state.get("workflow_result")
-    if isinstance(stored_result, WorkflowResult):
-        _render_result(stored_result)
-
 
 def _database_status(components: AppComponents) -> tuple[bool, str]:
     try:
         return components.repository.healthcheck(), "Database ready"
     except DatabaseError:
-        return False, "Initialize the local demo database before running a query."
+        return False, "The demo database is unavailable, so queries are disabled."
 
 
 def _render_result(result: WorkflowResult) -> None:

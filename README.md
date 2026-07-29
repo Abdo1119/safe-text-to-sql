@@ -74,12 +74,16 @@ Prerequisites: Python 3.11 or 3.12.
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.lock
-python scripts/initialize_demo_db.py
 streamlit run app.py
 ```
 
 On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`. The app opens at
 `http://localhost:8501`.
+
+The synthetic database is generated on first start, so no setup command is required.
+It is created only when missing, verified against the expected schema, and never
+overwritten once valid. Run `python scripts/initialize_demo_db.py` to create it ahead
+of time, or add `--force` to rebuild it.
 
 Try:
 

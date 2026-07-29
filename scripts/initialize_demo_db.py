@@ -5,7 +5,11 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from safe_text_to_sql.database.initializer import initialize_database
+from safe_text_to_sql.database.initializer import (
+    DatabaseProvisionState,
+    ensure_database,
+    initialize_database,
+)
 
 
 def main() -> None:
@@ -22,8 +26,15 @@ def main() -> None:
         help="Replace an existing generated database.",
     )
     arguments = parser.parse_args()
-    initialize_database(arguments.database, overwrite=arguments.force)
-    print("Synthetic demo database initialized.")
+    if arguments.force:
+        initialize_database(arguments.database, overwrite=True)
+        print("Synthetic demo database replaced.")
+        return
+    state = ensure_database(arguments.database)
+    if state is DatabaseProvisionState.ALREADY_PRESENT:
+        print("Synthetic demo database already present.")
+    else:
+        print("Synthetic demo database initialized.")
 
 
 if __name__ == "__main__":

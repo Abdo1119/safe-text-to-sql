@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -54,7 +55,7 @@ class SQLiteRepository:
 
     def healthcheck(self) -> bool:
         try:
-            with self._connect() as connection:
+            with closing(self._connect()) as connection:
                 row = connection.execute("SELECT 1").fetchone()
         except (OSError, sqlite3.DatabaseError) as exc:
             raise DatabaseError(
@@ -65,7 +66,7 @@ class SQLiteRepository:
 
     def introspect_schema(self) -> DatabaseSchema:
         try:
-            with self._connect() as connection:
+            with closing(self._connect()) as connection:
                 table_rows = connection.execute(
                     "SELECT name FROM sqlite_schema "
                     "WHERE type = 'table' AND name NOT LIKE 'sqlite_%' "
@@ -87,7 +88,7 @@ class SQLiteRepository:
 
     def execute(self, query: ValidatedSQLQuery) -> QueryResult:
         try:
-            with self._connect() as connection:
+            with closing(self._connect()) as connection:
                 connection.set_authorizer(_read_only_authorizer)
                 cursor = connection.execute(query.sql)
                 if cursor.description is None:
