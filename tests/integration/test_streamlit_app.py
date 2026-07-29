@@ -101,6 +101,9 @@ def test_safe_initialization_failure_stops_without_paths_or_stack_traces(
     assert len(app.error) == 1
     rendered = _rendered_text(app)
     assert "could not be prepared" in rendered
+    # The sanitized reason names the failing stage; without it the message is
+    # undiagnosable on a host whose logs are not reachable.
+    assert "Demo database initialization failed." in rendered
     assert str(tmp_path) not in rendered
     assert "Traceback" not in rendered
     assert not app.button

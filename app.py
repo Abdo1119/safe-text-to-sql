@@ -78,11 +78,14 @@ def main() -> None:
 
     try:
         with st.spinner("Initializing the synthetic demo database…"):
-            provision_state = provision_database(settings, project_root=project_root)
-    except DatabaseInitializationError:
+            provisioning = provision_database(settings, project_root=project_root)
+    except DatabaseInitializationError as exc:
+        # DatabaseInitializationError messages are fixed, author-written strings with no
+        # path or driver text, so naming the failing stage stays safe and is the only
+        # way to diagnose this on a host whose logs are not reachable.
         st.error(
             "The synthetic demo database could not be prepared, so queries are "
-            "disabled. No data was modified."
+            f"disabled. No data was modified. Reason: {exc}"
         )
         st.stop()
     except Exception:
@@ -90,7 +93,11 @@ def main() -> None:
         st.stop()
 
     try:
-        components = build_components(settings, project_root=project_root)
+        components = build_components(
+            settings,
+            project_root=project_root,
+            database_path=provisioning.path,
+        )
     except Exception:
         st.error("The application could not start with the current configuration.")
         st.stop()
@@ -98,7 +105,8 @@ def main() -> None:
     render_app(
         settings,
         components,
-        database_created=provision_state is DatabaseProvisionState.CREATED,
+        database_created=provisioning.state is DatabaseProvisionState.CREATED,
+        used_fallback_location=provisioning.used_fallback_location,
     )
 
 

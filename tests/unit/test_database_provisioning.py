@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -116,10 +117,12 @@ def test_provision_database_resolves_a_relative_path_against_the_project_root(
         }
     )
 
-    state = provision_database(settings, project_root=tmp_path)
+    provisioning = provision_database(settings, project_root=tmp_path)
 
-    assert state is DatabaseProvisionState.CREATED
-    assert (tmp_path / "data" / "demo" / "generated.sqlite").is_file()
+    assert provisioning.state is DatabaseProvisionState.CREATED
+    assert not provisioning.used_fallback_location
+    assert provisioning.path == tmp_path / "data" / "demo" / "generated.sqlite"
+    assert provisioning.path.is_file()
 
 
 def test_provision_database_needs_no_provider_credentials(tmp_path: Path) -> None:
@@ -133,4 +136,63 @@ def test_provision_database_needs_no_provider_credentials(tmp_path: Path) -> Non
         }
     )
 
-    assert provision_database(settings, project_root=tmp_path) is DatabaseProvisionState.CREATED
+    provisioning = provision_database(settings, project_root=tmp_path)
+
+    assert provisioning.state is DatabaseProvisionState.CREATED
+    assert not provisioning.used_fallback_location
+
+
+def test_provision_database_falls_back_when_the_checkout_is_not_writable(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """A read-only or non-persistent host mount must not disable the public demo."""
+
+    fallback_root = tmp_path / "fallback"
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(fallback_root))
+    settings = Settings.from_env(
+        {
+            "LLM_PROVIDER": "fake",
+            "DATABASE_PATH": "data/demo/demo.sqlite",
+        }
+    )
+
+    def _reject_the_configured_location(path: Path) -> DatabaseProvisionState:
+        if fallback_root not in path.parents:
+            raise DatabaseInitializationError("The demo database location could not be created.")
+        return ensure_database(path)
+
+    monkeypatch.setattr(
+        "safe_text_to_sql.bootstrap.ensure_database",
+        _reject_the_configured_location,
+    )
+
+    provisioning = provision_database(settings, project_root=tmp_path / "checkout")
+
+    assert provisioning.used_fallback_location
+    assert provisioning.state is DatabaseProvisionState.CREATED
+    assert provisioning.path == fallback_root / "safe-text-to-sql" / "demo.sqlite"
+    verify_database_schema(provisioning.path)
+
+
+def test_provision_database_reports_the_original_failure_when_the_fallback_also_fails(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path / "fallback"))
+    settings = Settings.from_env(
+        {
+            "LLM_PROVIDER": "fake",
+            "DATABASE_PATH": "data/demo/demo.sqlite",
+        }
+    )
+
+    def _always_fail(path: Path) -> DatabaseProvisionState:
+        raise DatabaseInitializationError("The demo database location could not be created.")
+
+    monkeypatch.setattr("safe_text_to_sql.bootstrap.ensure_database", _always_fail)
+
+    with pytest.raises(DatabaseInitializationError) as exc_info:
+        provision_database(settings, project_root=tmp_path / "checkout")
+
+    assert str(tmp_path) not in str(exc_info.value)

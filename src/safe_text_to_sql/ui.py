@@ -430,6 +430,7 @@ def render_app(
     components: AppComponents,
     *,
     database_created: bool = False,
+    used_fallback_location: bool = False,
 ) -> None:
     """Render the complete interactive workbench."""
 
@@ -471,6 +472,8 @@ def render_app(
             st.success("Database ready")
             if database_created:
                 st.caption("Synthetic demo data was generated for this deployment.")
+            if used_fallback_location:
+                st.caption("Stored in temporary storage; it resets when the app restarts.")
         else:
             st.warning(database_message)
         if st.button("Reset session", width="stretch"):
