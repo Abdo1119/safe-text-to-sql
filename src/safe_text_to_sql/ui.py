@@ -495,7 +495,7 @@ def render_app(
             st.success("Database ready")
         else:
             st.warning(database_message)
-        if st.button("Reset session", use_container_width=True):
+        if st.button("Reset session", width="stretch"):
             st.session_state.clear()
             st.rerun()
 
@@ -523,7 +523,7 @@ def render_app(
             "Generate guarded answer",
             type="primary",
             disabled=not database_ready,
-            use_container_width=True,
+            width="stretch",
         )
 
     if submitted:
@@ -578,7 +578,7 @@ def _render_result(result: WorkflowResult) -> None:
     st.subheader("Result rows")
     st.dataframe(
         _result_records(result.query_result),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
     if result.query_result.truncated:
