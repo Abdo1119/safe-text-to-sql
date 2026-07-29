@@ -29,7 +29,9 @@ packages = ["src/safe_text_to_sql"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --strict-config --strict-markers"
-pythonpath = ["src"]
+# "." makes the root-level app.py importable regardless of how pytest is invoked;
+# "python -m pytest" adds the working directory but a bare "pytest" does not.
+pythonpath = ["src", "."]
 testpaths = ["tests"]
 
 [tool.ruff]
