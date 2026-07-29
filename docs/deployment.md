@@ -17,6 +17,18 @@
 Do not create or commit `.streamlit/secrets.toml`. The bootstrap layer accepts only
 known configuration keys and environment variables take precedence.
 
+### Dependencies and import resolution
+
+Streamlit Cloud installs from `requirements.txt`, which lists runtime dependencies
+only. It deliberately does not install this project as a package. Streamlit Cloud runs
+`app.py` from the repository mount but reuses a cached environment between deploys, so
+an installed copy of the package would keep serving code from an earlier deploy
+whenever a push changed `src/` without changing the dependency set. `app.py` therefore
+puts `src/` at the front of `sys.path` before importing anything from the project.
+
+`requirements.lock` remains the pinned set for local development, CI, and Docker.
+`tests/unit/test_deployment_contract.py` fails if the two files drift apart.
+
 ### Database provisioning
 
 The generated database is not committed, so a cloud checkout starts without one. The

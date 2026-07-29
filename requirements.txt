@@ -1,0 +1,13 @@
+# Runtime dependencies for Streamlit Community Cloud.
+#
+# Streamlit Cloud reads this file. It deliberately excludes the local package: app.py
+# puts src/ on sys.path so the deployment always runs the checked-out code instead of a
+# package snapshot cached from an earlier deploy.
+#
+# Development and CI use requirements.lock, which pins the full transitive set plus the
+# lint, typing, and test tools. tests/unit/test_requirements.py keeps the two in step.
+google-genai==1.75.0
+numpy==2.4.6
+python-dotenv==1.2.2
+sqlglot==29.0.1
+streamlit==1.60.0

@@ -2,22 +2,49 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
-import streamlit as st
-from streamlit.errors import StreamlitSecretNotFoundError
+PROJECT_ROOT = Path(__file__).resolve().parent
 
-from safe_text_to_sql.bootstrap import (
+
+def ensure_source_path(project_root: Path = PROJECT_ROOT) -> None:
+    """Import the application package from this checkout, not a cached install.
+
+    Streamlit Community Cloud executes this file from the repository mount but resolves
+    imports from an environment it reuses between deploys. A push that changes `src/`
+    without changing the dependency set otherwise keeps serving the previously
+    installed package, which fails as a missing attribute rather than as a clear error.
+    """
+
+    source_root = project_root / "src"
+    if not source_root.is_dir():
+        return
+    entry = str(source_root)
+    if sys.path and sys.path[0] == entry:
+        return
+    while entry in sys.path:
+        sys.path.remove(entry)
+    sys.path.insert(0, entry)
+
+
+ensure_source_path()
+
+# Imported after the path shim so the checkout's package wins over a cached install.
+import streamlit as st  # noqa: E402
+from streamlit.errors import StreamlitSecretNotFoundError  # noqa: E402
+
+from safe_text_to_sql.bootstrap import (  # noqa: E402
     build_components,
     load_runtime_settings,
     provision_database,
 )
-from safe_text_to_sql.config import ConfigError
-from safe_text_to_sql.database.initializer import (
+from safe_text_to_sql.config import ConfigError  # noqa: E402
+from safe_text_to_sql.database.initializer import (  # noqa: E402
     DatabaseInitializationError,
     DatabaseProvisionState,
 )
-from safe_text_to_sql.ui import render_app
+from safe_text_to_sql.ui import render_app  # noqa: E402
 
 
 def main() -> None:
@@ -27,7 +54,7 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="expanded",
     )
-    project_root = Path(__file__).resolve().parent
+    project_root = PROJECT_ROOT
     try:
         secrets = st.secrets.to_dict()
     except StreamlitSecretNotFoundError:
